@@ -1,0 +1,37 @@
+version: "2"
+services:
+  celery_broker:
+    image: redis:3-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - "celery_broker_data:/data"
+  celery_backend:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: docker
+      POSTGRES_PASSWORD: docker
+    volumes:
+      - "celery_backend_data:/var/lib/postgresql/data"
+  worker:
+    image: celery_poc:test
+    command: celery worker -A tasks -Q url -l info -Ofair
+    env_file: env.sh
+    depends_on:
+      - celery_backend
+      - celery_broker
+  task_scheduler:
+    image: celery_poc:test
+    command: python scheduler.py
+    env_file: env.sh
+    depends_on:
+      - celery_broker
+      - celery_backend
+
+volumes:
+  celery_broker_data: {}
+  celery_backend_data: {}
+
